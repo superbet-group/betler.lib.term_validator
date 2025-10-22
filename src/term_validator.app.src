@@ -15,6 +15,7 @@
         map_dynamic_validator,
         any_of_validator,
         all_of_validator,
+        composite_validator,
         length_option_validator
     ]},
 	{registered, []},

@@ -59,7 +59,9 @@ validate(Term, {fields, Fields}, Validators) ->
                                 valid ->
                                     Accumulator;
                                 {invalid, Reason} ->
-                                    {UnexpectedFields, [{Key, Reason}|InvalidFields]}
+                                    {UnexpectedFields, [{Key, Reason}|InvalidFields]};
+                                InvalidOptions ->
+                                    {UnexpectedFields, [{Key, InvalidOptions}|InvalidFields]}
                             end
                     end
                 end,

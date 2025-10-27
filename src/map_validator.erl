@@ -20,68 +20,77 @@
 options(mandatory) ->
     [fields];
 options(optional) ->
-    [].
+    [allow_extra_fields].
 
+
+% Map structure (missing/unexpected keys) is checked in pre_validate/3.
+% Field values are validated in validate/3.
 pre_validate(Term, Options, _Validators) when is_map(Term) ->
-    {valid, Term, Options};
+    % 'fields' is a mandatory option, it's presence has been checked before this function is called
+    FieldsList = proplists:get_value(fields, Options),
+    % 'allow_extra_fields' is optional, and default is false
+    AllowExtra = proplists:get_value(allow_extra_fields, Options, false),
+
+    MandatoryKeysSet = gb_sets:from_list([ Key || {Key, _, mandatory} <- FieldsList ]),
+    AllKeysSet = gb_sets:from_list([ Key || {Key, _, _} <- FieldsList ]),
+    TermKeysSet = gb_sets:from_list(maps:keys(Term)),
+
+    MissingKeys = gb_sets:to_list(gb_sets:subtract(MandatoryKeysSet, TermKeysSet)),
+    UnexpectedKeys = gb_sets:to_list(gb_sets:subtract(TermKeysSet, AllKeysSet)),
+
+    MissingErrorList = get_missing_keys_error(MissingKeys),
+    UnexpectedErrorList = get_unexpected_keys_error(AllowExtra, UnexpectedKeys),
+    case MissingErrorList ++ UnexpectedErrorList of
+        [] ->
+            {valid, Term, proplists:delete(allow_extra_fields, Options)};
+        [SingleError | _] ->
+            {invalid, SingleError}
+    end;
 pre_validate(_Term, _Options, _Validators) ->
     {invalid, not_map}.
 
+
 validate(Term, {fields, Fields}, Validators) ->
-    % We first compute the missing fields by iterating over the declared
-    % mandatory fields and check if they are all present in the Erlang map.
-    % Then we compute the invalid and extra fields by iterating over the fields
-    % of the Erlang map.
-    MissingFields = lists:foldr(
-        fun
-            ({Key, _Format, mandatory}, Accumulator) ->
-                case maps:is_key(Key, Term) of
-                    true ->
-                        Accumulator;
-                    false ->
-                        [Key|Accumulator]
-                end;
-            ({_Key, _Format, optional}, Accumulator) ->
-                Accumulator
-        end,
-        [],
-        Fields
-    ),
-    case MissingFields of
-        [] ->
-            {UnexpectedFields, InvalidFields} = maps:fold(
-                fun(Key, Value, {UnexpectedFields, InvalidFields} = Accumulator) ->
-                    case proplists:lookup(Key, Fields) of
-                        none ->
-                            {[Key|UnexpectedFields], InvalidFields};
-                        {Key, Format, _} ->
-                            case term_validator:validate(Value, Format, Validators) of
-                                valid ->
-                                    Accumulator;
-                                {invalid, Reason} ->
-                                    {UnexpectedFields, [{Key, Reason}|InvalidFields]};
-                                InvalidOptions ->
-                                    {UnexpectedFields, [{Key, InvalidOptions}|InvalidFields]}
-                            end
+    % for a more efficient lookup convert list to map
+    FieldsMap = maps:from_list([ {Key, Format} || {Key, Format, _MandatoryOpt} <- Fields ]),
+    InvalidFields = lists:filtermap(
+        fun({Key, Value}) ->
+            case maps:find(Key, FieldsMap) of
+                error ->  % extra field with allow_extra_fields == true, ignore it here
+                    false;
+                {ok, Format} ->
+                    case term_validator:validate(Value, Format, Validators) of
+                        valid ->
+                            false;
+                        {invalid, Reason} ->
+                            {true, {Key, Reason}};
+                        InvalidOptions ->
+                            {true, {Key, InvalidOptions}}
                     end
-                end,
-                {[], []},
-                Term
-            ),
-            case UnexpectedFields of
-                [] ->
-                    case InvalidFields of
-                        [] ->
-                            {valid, Term};
-                        _ ->
-                            {invalid, {fields, InvalidFields}}
-                    end;
-                _ ->
-                    {invalid, {unexpected_fields, UnexpectedFields}}
-            end;
+            end
+        end,
+        maps:to_list(Term)
+    ),
+    case InvalidFields of
+        [] ->
+            {valid, Term};
         _ ->
-            {invalid, {missing_fields, MissingFields}}
+            {invalid, {fields, InvalidFields}}
     end.
 
 post_validate(_Term, _Validators) ->
     valid.
+
+
+%%%-------------------------------------------------------------------
+%%% internal functions
+
+get_missing_keys_error([]) ->
+    [];
+get_missing_keys_error(MissingKeys) ->
+    [{missing_fields, MissingKeys}].
+
+get_unexpected_keys_error(false, [_|_] = UnexpectedKeys) ->
+    [{unexpected_fields, UnexpectedKeys}];
+get_unexpected_keys_error(_, _) ->
+    [].

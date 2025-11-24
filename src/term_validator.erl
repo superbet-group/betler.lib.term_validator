@@ -153,14 +153,12 @@ has_dynamic_options(_MandatoryOptions, _OptionalOptions) ->
 -spec has_missing_options(options(), [option_name()]) ->
     no | {yes, [option_name()]}.
 has_missing_options(Options, MandatoryOptions) ->
-    % We remove mandatory option one by one if they're present. If there's
-    % remaining mandatory options, then we have missing options.
-    RemainingOptions = lists:dropwhile(fun(Name) ->
-        proplists:is_defined(Name, Options)
+    Missing = lists:filter(fun(Name) ->
+        not proplists:is_defined(Name, Options)
     end, MandatoryOptions),
-    case RemainingOptions of
+    case Missing of
         [] -> no;
-        _ -> {yes, RemainingOptions}
+        _  -> {yes, Missing}
     end.
 
 -spec has_invalid_options(options(), [option_name()]) ->

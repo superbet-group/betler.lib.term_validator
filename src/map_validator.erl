@@ -27,7 +27,7 @@ pre_validate(Term, Options, _Validators) when is_map(Term) ->
 pre_validate(_Term, _Options, _Validators) ->
     {invalid, not_map}.
 
-validate(Term, {fields, Fields}, Validators) ->
+validate(Term, {fields, Fields}, Validators) when is_list(Fields) ->
     % We first compute the missing fields by iterating over the declared
     % mandatory fields and check if they are all present in the Erlang map.
     % Then we compute the invalid and extra fields by iterating over the fields
@@ -81,7 +81,9 @@ validate(Term, {fields, Fields}, Validators) ->
             end;
         _ ->
             {invalid, {missing_fields, MissingFields}}
-    end.
+    end;
+validate(_Term, {fields, _Fields}, _Validators) ->
+    {invalid_option_value, not_list}.
 
 post_validate(_Term, _Validators) ->
     valid.

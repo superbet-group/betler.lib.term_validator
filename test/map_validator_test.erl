@@ -71,3 +71,22 @@ map_validator_fields_test() ->
     true = lists:member({"bar", not_number}, Fields),
 
     ok.
+
+map_validator_options_test() ->
+    UnknownValidatorFormat = {map, [{fields, [
+        {foo, unknown_validator, mandatory}
+    ]}]},
+    {invalid, {fields, [{foo,{no_validator,unknown_validator}}]}} = term_validator:validate(#{
+        foo => true
+    }, UnknownValidatorFormat),
+
+    MissingOptionFormat = {map, []},
+    {missing_options, [fields]} = term_validator:validate(#{}, MissingOptionFormat),
+
+    InvalidOptionsFormat = {map, [{fields, []}, {unknown_option, true}]},
+    {invalid_options, [unknown_option]} = term_validator:validate(#{}, InvalidOptionsFormat),
+
+    InvalidOptionValue = {map, [{fields, atom}]},
+    {invalid_option_value,{fields,atom},not_list} = term_validator:validate(#{}, InvalidOptionValue),
+
+    ok.

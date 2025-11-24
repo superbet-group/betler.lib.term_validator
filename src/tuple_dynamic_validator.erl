@@ -43,7 +43,9 @@ validate(Term, {element, Format}, Validators) ->
                 valid ->
                     Accumulator;
                 {invalid, Reason} ->
-                    [{Index, Reason}|Accumulator]
+                    [{Index, Reason}|Accumulator];
+                OtherError ->
+                    [{Index, OtherError}|Accumulator]
             end
         end,
         [],

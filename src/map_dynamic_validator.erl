@@ -41,7 +41,9 @@ validate(Term, {key, Format}, Validators) ->
             valid ->
                 Accumulator;
             {invalid, Reason} ->
-                [{Key, Reason}|Accumulator]
+                [{Key, Reason}|Accumulator];
+            OtherError ->
+                [{Key, OtherError}|Accumulator]
         end
     end, [], maps:keys(Term)),
     case Result of
@@ -57,7 +59,9 @@ validate(Term, {value, Format}, Validators) ->
             valid ->
                 Accumulator;
             {invalid, Reason} ->
-                [{Key, Reason}|Accumulator]
+                [{Key, Reason}|Accumulator];
+            OtherError ->
+                [{Key, OtherError}|Accumulator]
         end
     end, [], Term),
     case Result of

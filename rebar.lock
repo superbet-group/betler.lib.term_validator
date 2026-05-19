@@ -1,4 +1,1 @@
-[{<<"rebar">>,
-  {git,"https://github.com/eproxus/meck",
-       {ref,"5aaa24886db404f995c9a91b421367f6bfe6e566"}},
-  0}].
+[].

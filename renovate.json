@@ -1,4 +1,5 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>superbet-group/renovate-config:rebar"]
+  "extends": ["github>superbet-group/renovate-config:rebar"],
+  "automerge": true
 }
